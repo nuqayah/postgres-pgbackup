@@ -1,0 +1,21 @@
+---
+services:
+  postgres:
+    networks:
+      - backend
+    image: postgres-nuqayah:16
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    env_file:
+      - .env
+    volumes:
+      - pgbackrest.conf:/etc/pgbackrest.conf
+      - ${DB_DATA_PATH}:/var/lib/postgresql/data
+      - ${SSH_PATH:-.ssh}:/var/lib/postgresql/.ssh
+
+networks:
+  backend:
+    driver: bridge
