@@ -22,6 +22,7 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
 
 # Final stage
 FROM postgres:16
+LABEL org.opencontainers.image.source="https://github.com/nuqayah/postgres-pgbackup"
 # Copy pgBackRest from builder
 COPY --from=builder /usr/bin/pgbackrest /usr/bin/pgbackrest
 
