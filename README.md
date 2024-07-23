@@ -1,5 +1,9 @@
 # PostgreSQL Nuqayah Custom Image
 
+![GitHub CI](https://github.com/nuqayah/postgres-pgbackup/actions/workflows/publish.yml/badge.svg)
+[![ghcr.io badge](https://ghcr-badge.egpl.dev/nuqayah/postgres-pgbackup/latest_tag?trim=major&label=GitHub%20Registry&color=steelblue)](https://github.com/nuqayah/postgres-pgbackup/pkgs/container/postgres-pgbackup)
+[![ghcr.io size badge](https://ghcr-badge.egpl.dev/nuqayah/postgres-pgbackup/size?tag=latest&label=Image%20size&color=steelblue)](https://github.com/nuqayah/postgres-pgbackup/pkgs/container/postgres-pgbackup)
+
 This `Dockerfile` builds a custom image which adds the below features to `postgresql:16`:
 
 - pgBackrest (Uses SFTP for backup)
