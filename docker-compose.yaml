@@ -12,7 +12,7 @@ services:
     env_file:
       - .env
     volumes:
-      - pgbackrest.conf:/etc/pgbackrest.conf
+      - ./pgbackrest.conf:/etc/pgbackrest.conf
       - ${DB_DATA_PATH}:/var/lib/postgresql/data
       - ${SSH_PATH:-.ssh}:/var/lib/postgresql/.ssh
 
