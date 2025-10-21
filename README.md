@@ -4,7 +4,7 @@
 [![ghcr.io badge](https://ghcr-badge.egpl.dev/nuqayah/postgres-pgbackup/latest_tag?trim=major&label=GitHub%20Registry&color=steelblue)](https://github.com/nuqayah/postgres-pgbackup/pkgs/container/postgres-pgbackup)
 [![ghcr.io size badge](https://ghcr-badge.egpl.dev/nuqayah/postgres-pgbackup/size?tag=latest&label=Image%20size&color=steelblue)](https://github.com/nuqayah/postgres-pgbackup/pkgs/container/postgres-pgbackup)
 
-This `Dockerfile` builds a custom image which adds the below features to `postgresql:16`:
+This `Dockerfile` builds a custom image which adds the below features to `postgres:18`:
 
 - pgBackrest (Uses SFTP for backup)
 - vim
@@ -13,9 +13,9 @@ This `Dockerfile` builds a custom image which adds the below features to `postgr
 
 ## Building
 
-If you need to build with a different pgBackrest version, you can do so by passing the --build-arg flag to the docker build command:
+If you need to build with a different pgBackRest version, you can do so by passing the --build-arg flag to the docker build command:
 
-`docker build --build-arg PGBACKREST_VERSION=2.53.0 -t postgres-nuqayah:16 .`
+`docker build --build-arg PGBACKREST_VERSION=2.57.0 -t postgres-nuqayah:18 .`
 
 
 ## Usage
