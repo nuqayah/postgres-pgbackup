@@ -1,6 +1,6 @@
 # Build stage
-FROM postgres:16 AS builder
-ARG PGBACKREST_VERSION=2.52.1
+FROM public.ecr.aws/docker/library/postgres:18.0 AS builder
+ARG PGBACKREST_VERSION=2.57.0
 
 # Install build dependencies and build pgBackRest
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
@@ -21,7 +21,7 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Final stage
-FROM postgres:16
+FROM public.ecr.aws/docker/library/postgres:18.0
 LABEL org.opencontainers.image.source="https://github.com/nuqayah/postgres-pgbackup"
 # Copy pgBackRest from builder
 COPY --from=builder /usr/bin/pgbackrest /usr/bin/pgbackrest
@@ -31,5 +31,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl ca-certificates openssh-server vim \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-    
+
 CMD ["postgres", "-c", "max_connections=500"]

@@ -6,7 +6,7 @@ on:
       pgbackrest_version:
         description: 'pgBackrest version'
         required: true
-        default: '2.52.1'
+        default: '2.57.0'
         type: string
 
 jobs:
@@ -19,7 +19,7 @@ jobs:
       contents: read
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

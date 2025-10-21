@@ -3,7 +3,7 @@ services:
   postgres:
     networks:
       - backend
-    image: postgres-nuqayah:16
+    image: postgres-nuqayah:18
     build:
       context: .
       dockerfile: Dockerfile
