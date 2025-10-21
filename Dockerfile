@@ -1,5 +1,6 @@
 # Build stage
-FROM public.ecr.aws/docker/library/postgres:18.0 AS builder
+ARG POSTGRES_MAJOR=18
+FROM public.ecr.aws/docker/library/postgres:${POSTGRES_MAJOR} AS builder
 ARG PGBACKREST_VERSION=2.57.0
 
 # Install build dependencies and build pgBackRest
@@ -18,7 +19,7 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* /tmp/pgbackrest-release
 
 # Final stage
-FROM public.ecr.aws/docker/library/postgres:18.0
+FROM public.ecr.aws/docker/library/postgres:${POSTGRES_MAJOR}
 LABEL org.opencontainers.image.source="https://github.com/nuqayah/postgres-pgbackup"
 # Copy pgBackRest from builder
 COPY --from=builder /usr/bin/pgbackrest /usr/bin/pgbackrest

@@ -13,9 +13,9 @@ This `Dockerfile` builds a custom image which adds the below features to `postgr
 
 ## Building
 
-If you need to build with a different pgBackRest version, you can do so by passing the --build-arg flag to the docker build command:
+If you need to build with a different pgBackRest version or PostgreSQL major, you can do so by passing build arguments to the docker build command (defaults are `PGBACKREST_VERSION=2.57.0` and `POSTGRES_MAJOR=18`):
 
-`docker build --build-arg PGBACKREST_VERSION=2.57.0 -t postgres-nuqayah:18 .`
+`docker build --build-arg POSTGRES_MAJOR=17 --build-arg PGBACKREST_VERSION=2.57.0 -t postgres-nuqayah:17 .`
 
 
 ## Usage

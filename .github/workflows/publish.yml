@@ -16,28 +16,30 @@ permissions:
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository }}
   VERSION_TAG: ${{ github.event.inputs.pgbackrest_version }}
+  DEFAULT_POSTGRES_MAJOR: '18'
 
 jobs:
   build:
-    name: Build image (${{ matrix.platform }})
-    runs-on: ${{ matrix.runner }}
+    name: Build image (pg${{ matrix.pg_major }} • ${{ matrix.platform }})
+    runs-on: ${{ contains(matrix.platform, 'arm64') && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - platform: linux/amd64
-            runner: ubuntu-24.04
-          - platform: linux/arm64
-            runner: ubuntu-24.04-arm
+        pg_major: ['16', '17', '18']
+        platform: ['linux/amd64', 'linux/arm64']
     steps:
       - name: Check out the repo
         uses: actions/checkout@v5
 
-      - name: Prepare platform name
+      - name: Prepare build variables
         run: |
           platform=${{ matrix.platform }}
-          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
-          echo "TEST_TAG=pgbackrest-test-${platform//\//-}" >> $GITHUB_ENV
+          pg_major=${{ matrix.pg_major }}
+          platform_pair=${platform//\//-}
+          echo "PLATFORM_PAIR=${platform_pair}" >> $GITHUB_ENV
+          echo "PG_MAJOR=${pg_major}" >> $GITHUB_ENV
+          echo "TEST_TAG=pgbackrest-test-${pg_major}-${platform_pair}" >> $GITHUB_ENV
+          echo "CACHE_SCOPE=pgbackrest-${pg_major}-${platform_pair}" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -59,8 +61,9 @@ jobs:
           tags: ${{ env.TEST_TAG }}
           build-args: |
             PGBACKREST_VERSION=${{ env.VERSION_TAG }}
-          cache-from: type=gha,scope=pgbackrest-${{ env.PLATFORM_PAIR }}
-          cache-to: type=gha,scope=pgbackrest-${{ env.PLATFORM_PAIR }},mode=max
+            POSTGRES_MAJOR=${{ env.PG_MAJOR }}
+          cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
+          cache-to: type=gha,scope=${{ env.CACHE_SCOPE }},mode=max
 
       - name: Smoke test (${{ matrix.platform }})
         run: |
@@ -78,34 +81,39 @@ jobs:
           tags: ${{ env.IMAGE_NAME }}
           build-args: |
             PGBACKREST_VERSION=${{ env.VERSION_TAG }}
-          cache-from: type=gha,scope=pgbackrest-${{ env.PLATFORM_PAIR }}
-          cache-to: type=gha,scope=pgbackrest-${{ env.PLATFORM_PAIR }},mode=max
+            POSTGRES_MAJOR=${{ env.PG_MAJOR }}
+          cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
+          cache-to: type=gha,scope=${{ env.CACHE_SCOPE }},mode=max
 
       - name: Export digest
         run: |
-          mkdir -p ${{ runner.temp }}/digests
+          mkdir -p ${{ runner.temp }}/digests/${{ env.PG_MAJOR }}
           digest="${{ steps.build.outputs.digest }}"
-          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+          touch "${{ runner.temp }}/digests/${{ env.PG_MAJOR }}/${digest#sha256:}"
 
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ env.PLATFORM_PAIR }}
-          path: ${{ runner.temp }}/digests/*
+          name: digests-pg${{ env.PG_MAJOR }}-${{ env.PLATFORM_PAIR }}
+          path: ${{ runner.temp }}/digests/${{ env.PG_MAJOR }}
           if-no-files-found: error
           retention-days: 1
 
   merge:
-    name: Publish multi-arch manifest
+    name: Publish multi-arch manifest (pg${{ matrix.pg_major }})
     runs-on: ubuntu-latest
     needs:
       - build
+    strategy:
+      fail-fast: false
+      matrix:
+        pg_major: ['16', '17', '18']
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
           path: ${{ runner.temp }}/digests
-          pattern: digests-*
+          pattern: digests-pg${{ matrix.pg_major }}-*
           merge-multiple: true
 
       - name: Login to GitHub Container Registry
@@ -121,17 +129,43 @@ jobs:
       - name: Create manifest list
         working-directory: ${{ runner.temp }}/digests
         run: |
+          set -euo pipefail
           image=${{ env.IMAGE_NAME }}
           version=${{ env.VERSION_TAG }}
+          pg_major=${{ matrix.pg_major }}
+
+          declare -A seen=()
           args=()
-          for digest in *; do
+          while IFS= read -r -d '' path; do
+            digest=$(basename "$path")
+            if [[ ! "$digest" =~ ^[0-9a-f]{64}$ ]]; then
+              continue
+            fi
+            if [[ -n "${seen[$digest]:-}" ]]; then
+              continue
+            fi
+            seen[$digest]=1
             args+=("${image}@sha256:${digest}")
-          done
-          docker buildx imagetools create \
-            -t ${image}:${version} \
-            -t ${image}:latest \
-            "${args[@]}"
+          done < <(find . -mindepth 1 -maxdepth 2 -print0)
+
+          if [ "${#args[@]}" -eq 0 ]; then
+            echo "No digests found for PostgreSQL ${pg_major}" >&2
+            exit 1
+          fi
+
+          tags=(
+            -t ${image}:${version}-pg${pg_major}
+            -t ${image}:pg${pg_major}
+          )
+          if [ "${pg_major}" = "${{ env.DEFAULT_POSTGRES_MAJOR }}" ]; then
+            tags+=(
+              -t ${image}:${version}
+              -t ${image}:latest
+            )
+          fi
+
+          docker buildx imagetools create "${tags[@]}" "${args[@]}"
 
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:${{ env.VERSION_TAG }}
+          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:${{ env.VERSION_TAG }}-pg${{ matrix.pg_major }}
