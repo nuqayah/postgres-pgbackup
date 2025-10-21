@@ -4,21 +4,18 @@ ARG PGBACKREST_VERSION=2.57.0
 
 # Install build dependencies and build pgBackRest
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
-    curl make gcc libpq-dev libssh2-1-dev libssl-dev libxml2-dev pkg-config \
+    curl meson ninja-build gcc libpq-dev libssh2-1-dev libssl-dev libxml2-dev pkg-config \
     liblz4-dev libzstd-dev libbz2-dev libz-dev libyaml-dev ca-certificates > /dev/null 2>&1 \
     && update-ca-certificates > /dev/null 2>&1 \
     && mkdir -p /tmp/pgbackrest-release \
     && cd /tmp/pgbackrest-release \
     && curl -s -L -o pgbackrest.tar.gz https://github.com/pgbackrest/pgbackrest/archive/release/${PGBACKREST_VERSION}.tar.gz \
     && tar xzf pgbackrest.tar.gz --strip-components=1 \
-    && cd src \
-    && ./configure > /dev/null 2>&1 \
-    && make -s \
-    && mv pgbackrest /usr/bin \
-    && chmod 755 /usr/bin/pgbackrest \
+    && meson setup --prefix /usr build \
+    && ninja -C build install \
     && pgbackrest version \
     && apt-get clean -qq \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* /tmp/pgbackrest-release
 
 # Final stage
 FROM public.ecr.aws/docker/library/postgres:18.0
